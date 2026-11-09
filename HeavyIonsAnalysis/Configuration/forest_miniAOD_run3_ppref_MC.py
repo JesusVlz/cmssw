@@ -108,12 +108,19 @@ process.load('HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff')
 #####################################################################################
 
 #####################
-# photons
-######################
+# Event rho for the optional ppRef L1FastJet correction
+#####################
+# Keep the existing EEC input path ggHiNtuplizer/EventTree/rho.
+# With object output disabled, this tree contains run, event, lumis and rho.
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
-process.ggHiNtuplizer.doGenParticles = cms.bool(True)
-process.ggHiNtuplizer.doMuons = cms.bool(False) # unpackedMuons collection not found from file
-process.ggHiNtuplizer.useValMapIso = cms.bool(False) # True here causes seg fault
+process.ggHiNtuplizer.rhoSrc = cms.InputTag("fixedGridRhoFastjetAll")
+process.ggHiNtuplizer.doGenParticles = cms.bool(False)
+process.ggHiNtuplizer.doSuperClusters = cms.bool(False)
+process.ggHiNtuplizer.doElectrons = cms.bool(False)
+process.ggHiNtuplizer.doPhotons = cms.bool(False)
+process.ggHiNtuplizer.doMuons = cms.bool(False)
+process.ggHiNtuplizer.doPfIso = cms.bool(False)
+process.ggHiNtuplizer.useValMapIso = cms.bool(False)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 ####################################################################################
@@ -133,7 +140,7 @@ process.forest = cms.Path(
     # process.hltobject +
     # process.l1object
     process.HiGenParticleAna +
-    # process.ggHiNtuplizer +
+    process.ggHiNtuplizer +
     process.trackSequencePP 
     # process.unpackedMuons +
     # process.muonAnalyzer

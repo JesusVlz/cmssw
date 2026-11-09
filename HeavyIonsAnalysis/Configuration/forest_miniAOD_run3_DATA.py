@@ -267,7 +267,7 @@ process.hltfilter = hltHighLevel.clone(
        #"HLT_HIZeroBias_v4",
        # "HLT_MinimumBiasHF_OR_BptxAND_v*"
        "HLT_MinimumBiasHF_OR_BptxAND_v*",
-       "HLT_OxyL1SingleJet*"
+       # "HLT_OxyL1SingleJet*"
        # "HLT_HIMinimumBias_v*",
    ]
 )
