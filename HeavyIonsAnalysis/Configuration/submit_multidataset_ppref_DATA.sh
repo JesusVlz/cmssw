@@ -161,6 +161,8 @@ while IFS= read -r dataset || [[ -n "${dataset}" ]]; do
         "General.requestName=${request_name}"
         "Data.inputDataset=${dataset}"
         "Data.outputDatasetTag=${request_name}"
+        "Data.outLFNDirBase=/store/user/jvelazqu/HiForest/ppref2024/DATA"
+        "Site.storageSite=T2_US_Nebraska"
     )
 
     if [[ -n "${units_per_job}" ]]; then
