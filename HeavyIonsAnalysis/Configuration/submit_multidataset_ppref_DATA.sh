@@ -6,20 +6,23 @@ set -u
 
 usage() {
     cat <<'USAGE'
-Usage: submit_multidataset_ppref_DATA.sh [--dry-run] [DATASET_FILE]
+Usage: submit_multidataset_ppref_DATA.sh [--dry-run] [--discover | DATASET_FILE]
 
 Default dataset list: datasets_ppref_DATA.txt beside this script.
 Custom relative dataset-list paths are resolved from the caller's directory.
   --dry-run   Print commands without invoking CRAB or creating tasks.
+  --discover  Query DAS for all PPRef Run2024J PromptReco-v1 MINIAOD datasets.
   -h, --help  Show this help.
 USAGE
 }
 
 dry_run=false
+discover=false
 dataset_file=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --dry-run) dry_run=true ;;
+        --discover) discover=true ;;
         -h|--help) usage; exit 0 ;;
         -*)
             echo "ERROR: Unknown option: $1" >&2
@@ -37,8 +40,32 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+if "${discover}" && [[ -n "${dataset_file}" ]]; then
+    echo "ERROR: --discover and DATASET_FILE cannot be combined." >&2
+    exit 1
+fi
+
 script_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)" || exit 1
-if [[ -z "${dataset_file}" ]]; then
+if "${discover}"; then
+    if ! command -v dasgoclient >/dev/null 2>&1; then
+        echo "ERROR: dasgoclient is required for --discover." >&2
+        exit 1
+    fi
+    dataset_file="$(mktemp)" || exit 1
+    trap 'rm -f -- "$dataset_file"' EXIT
+    if ! dasgoclient -query='dataset=/PPRef*/Run2024J-PromptReco-v1/MINIAOD' -limit=0 > "${dataset_file}"; then
+        echo "ERROR: DAS query failed; no CRAB tasks submitted." >&2
+        exit 1
+    fi
+    if [[ ! -s "${dataset_file}" ]]; then
+        echo "ERROR: DAS query returned an empty list; no CRAB tasks submitted." >&2
+        exit 1
+    fi
+    if ! grep -Fxq '/PPRefZeroBiasPlusForward1/Run2024J-PromptReco-v1/MINIAOD' "${dataset_file}"; then
+        echo "ERROR: DAS did not return PPRefZeroBiasPlusForward1; no CRAB tasks submitted." >&2
+        exit 1
+    fi
+elif [[ -z "${dataset_file}" ]]; then
     dataset_file="${script_directory}/datasets_ppref_DATA.txt"
 elif [[ "${dataset_file}" != /* ]]; then
     dataset_file="${PWD}/${dataset_file}"
@@ -48,9 +75,9 @@ fi
 cd -- "${script_directory}" || exit 1
 
 CRAB_CONFIG="crab_ppref_DATA.py"
-WORK_AREA="crab_projects/ppref2024_DATA"
+WORK_AREA="crab_projects/ppref2024_DATA_Nebraska"
 REQUEST_PREFIX="HiForest_ppref2024_DATA"
-REQUEST_VERSION="v1"
+REQUEST_VERSION="Nebraska_v1"
 
 if [[ ! -f "${CRAB_CONFIG}" ]]; then
     echo "ERROR: CRAB configuration not found: ${CRAB_CONFIG}" >&2
@@ -77,7 +104,7 @@ while IFS= read -r dataset || [[ -n "${dataset}" ]]; do
     [[ "${dataset}" =~ ^[[:space:]]*# ]] && continue
 
     # Accept dataset names, not /store/... ROOT filenames.
-    if [[ ! "${dataset}" =~ ^/PPRefHardProbes[0-4]/Run2024J-PromptReco-v1/MINIAOD$ ]]; then
+    if [[ ! "${dataset}" =~ ^/PPRef[A-Za-z0-9_]+/Run2024J-PromptReco-v1/MINIAOD$ ]]; then
         echo "[FAILED] Invalid dataset entry: ${dataset}" >&2
         failed=$((failed + 1))
         continue
