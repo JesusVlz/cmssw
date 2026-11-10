@@ -6,23 +6,26 @@ set -u
 
 usage() {
     cat <<'USAGE'
-Usage: submit_multidataset_ppref_DATA.sh [--dry-run] [--discover | DATASET_FILE]
+Usage: submit_multidataset_ppref_DATA.sh [--dry-run] [--zero-bias] [--discover | DATASET_FILE]
 
 Default dataset list: datasets_ppref_DATA.txt beside this script.
 Custom relative dataset-list paths are resolved from the caller's directory.
   --dry-run   Print commands without invoking CRAB or creating tasks.
   --discover  Query DAS for all PPRef Run2024J PromptReco-v1 MINIAOD datasets.
+  --zero-bias Submit only PPRefZeroBiasPlusForward0 and 1 from the dataset list.
   -h, --help  Show this help.
 USAGE
 }
 
 dry_run=false
 discover=false
+zero_bias=false
 dataset_file=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --dry-run) dry_run=true ;;
         --discover) discover=true ;;
+        --zero-bias) zero_bias=true ;;
         -h|--help) usage; exit 0 ;;
         -*)
             echo "ERROR: Unknown option: $1" >&2
@@ -87,6 +90,15 @@ if [[ ! -f "${dataset_file}" || ! -r "${dataset_file}" ]]; then
     echo "ERROR: Dataset list not found or not readable: ${dataset_file}" >&2
     exit 1
 fi
+if "${zero_bias}"; then
+    for stream in 0 1; do
+        expected="/PPRefZeroBiasPlusForward${stream}/Run2024J-PromptReco-v1/MINIAOD"
+        if ! grep -Fxq "${expected}" "${dataset_file}"; then
+            echo "ERROR: Dataset list is missing ${expected}; no CRAB tasks submitted." >&2
+            exit 1
+        fi
+    done
+fi
 if ! "${dry_run}" && ! command -v crab >/dev/null 2>&1; then
     echo "ERROR: crab is not available; initialize the CRAB environment." >&2
     exit 1
@@ -112,7 +124,21 @@ while IFS= read -r dataset || [[ -n "${dataset}" ]]; do
 
     primary_dataset="${dataset#/}"
     primary_dataset="${primary_dataset%%/*}"
-    request_name="${REQUEST_PREFIX}_${primary_dataset}_${REQUEST_VERSION}"
+    if "${zero_bias}" && [[ ! "${primary_dataset}" =~ ^PPRefZeroBiasPlusForward[01]$ ]]; then
+        continue
+    fi
+
+    # These streams each generated ~17,800 jobs at 50,000 events/job.
+    # Use a fresh request name and larger splitting target for the retries.
+    request_version="${REQUEST_VERSION}"
+    units_per_job=""
+    if [[ "${primary_dataset}" =~ ^PPRefZeroBiasPlusForward[01]$ ]]; then
+        request_version="Nebraska_v2"
+        units_per_job="125000"
+    fi
+
+    # Do not change the dataset name after extracting its primary stream.
+    request_name="${REQUEST_PREFIX}_${primary_dataset}_${request_version}"
     project_directory="${WORK_AREA}/crab_${request_name}"
 
     if [[ -n "${seen_requests[${request_name}]:-}" ]]; then
@@ -136,6 +162,10 @@ while IFS= read -r dataset || [[ -n "${dataset}" ]]; do
         "Data.inputDataset=${dataset}"
         "Data.outputDatasetTag=${request_name}"
     )
+
+    if [[ -n "${units_per_job}" ]]; then
+        command+=("Data.unitsPerJob=${units_per_job}")
+    fi
 
     if "${dry_run}"; then
         printf '[DRY RUN] '
