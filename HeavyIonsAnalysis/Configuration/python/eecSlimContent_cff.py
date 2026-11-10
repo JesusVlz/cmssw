@@ -11,12 +11,10 @@ TRACK_BRANCHES = (
     "nTrk", "trkPt", "trkEta", "trkPhi", "trkPtError", "highPurity",
     "trkDzFirstVtx", "trkDzErrFirstVtx", "trkDxyFirstVtx", "trkDxyErrFirstVtx",
     "trkCharge",
-    # The ordinary EEC reader still opens these legacy quality inputs.
-    "trkNormChi2", "trkNLayers", "trkNHits", "pfEcal", "pfHcal",
 )
 
 JET_BRANCHES = (
-    "run", "evt", "lumi", "nref", "rawpt", "jtpt", "jteta", "jtphi",
+    "nref", "rawpt", "jtpt", "jteta", "jtphi",
     "WTAeta", "WTAphi", "jtarea", "trackMax",
     # Current Run-3 PF Jet ID and whole-event veto inputs.
     "jtPfCHF", "jtPfNHF", "jtPfCEF", "jtPfNEF", "jtPfMUF",
@@ -24,15 +22,34 @@ JET_BRANCHES = (
 )
 
 MC_JET_BRANCHES = (
-    "pthat", "refpt", "refeta", "refphi", "refparton_flavorForB",
+    "refpt", "refeta", "refphi", "refparton_flavorForB",
     "ngen", "genpt", "geneta", "genphi", "WTAgeneta", "WTAgenphi",
 )
 
-GEN_PARTICLE_BRANCHES = ("mult", "pt", "eta", "phi", "chg", "sube")
+GEN_PARTICLE_BRANCHES = ("pt", "eta", "phi", "chg", "sube")
+
+EVENT_BRANCHES = ("run", "lumi", "evt", "vz", "hiHFPlus_pf", "hiHFMinus_pf")
 
 
 def configureEECSlimForest(process, isMC, isOO):
     """Configure output content after all R4/R8 analyzers have been created."""
+    event_branches = EVENT_BRANCHES + (("hiBin", "hiHF_pf") if isOO else ())
+    if isMC:
+        event_branches += ("pthat", "weight")
+    process.hiEvtAnalyzer.branchesToKeep = cms.untracked.vstring(*event_branches)
+    # PF-HF inputs are read even for ppRef; this does not enable pp centrality.
+    process.hiEvtAnalyzer.doPFHF = cms.untracked.bool(True)
+    filters = ("pprimaryVertexFilter",)
+    if isOO:
+        filters += (("OOphfCoincFilterPF2Th4" if isMC else "OOpfCoincFilterPF2Th4"), "pileupVertexFilter")
+    process.skimanalysis.branchesToKeep = cms.untracked.vstring(*filters)
+    if isMC:
+        # Current MC cards have TriggerSelection 0.
+        process.forest.remove(process.hltanalysis)
+    else:
+        trigger = "HLT_MinimumBiasHF_OR_BptxAND_v1" if isOO else "HLT_PPRefZeroBias_v6"
+        process.hltanalysis.branchesToKeep = cms.untracked.vstring(trigger)
+
     tracks = getattr(process, "PbPbTracks" if isOO else "ppTracks")
     tracks.trackPtMin = cms.untracked.double(0.5)
     tracks.trackEtaMax = cms.untracked.double(2.6)
