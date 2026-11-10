@@ -167,7 +167,7 @@ process.forest = cms.Path(
 #####################################################################################
 # Select the types of jets filled
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC 
-jetPtMin = 20
+jetPtMin = 15
 jetAbsEtaMax = 2.5
 
 # Choose which additional information is added to jet trees

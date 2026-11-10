@@ -161,7 +161,7 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 # Generator level jets in original miniAOD jets contain neutrinos
 # You will need to do reclustering with R-value to get generator level jets without neutrinos
 # Add all the values you want to process to the list
-jetLabels = ["4"]
+jetLabels = ["4", "8"]
 
 # add candidate tagging for all selected jet radii
 from HeavyIonsAnalysis.JetAnalysis.setupJets_ppRef_cff import candidateBtaggingMiniAOD
