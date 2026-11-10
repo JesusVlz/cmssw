@@ -23,6 +23,8 @@ def expected_content(sample, l1=False):
     jets = {'nref', 'rawpt', 'jtpt', 'jteta', 'jtphi', 'WTAeta', 'WTAphi',
             'trackMax', 'jtarea', 'jtPfCHF', 'jtPfNHF', 'jtPfCEF', 'jtPfNEF',
             'jtPfMUF', 'jtPfCHM', 'jtPfNHM', 'jtPfCEM', 'jtPfNEM', 'jtPfMUM'}
+    if not oo:
+        jets |= {'jtPfCM', 'jtPfNM'}
     if mc:
         jets |= {'refpt', 'refeta', 'refphi', 'refparton_flavorForB', 'ngen',
                  'genpt', 'geneta', 'genphi', 'WTAgeneta', 'WTAgenphi'}
@@ -85,6 +87,25 @@ def inspect(path, sample, l1=False, strict=False, inventory=None):
         if events is not None and 'evt' in events:
             if events['evt'].typename not in ('uint64_t', 'ULong64_t', 'unsigned long long'):
                 errors.append('hiEvtAnalyzer/HiTree/evt must preserve unsigned 64-bit identity')
+        # Full PF counts must be native Int_t arrays and include their category lower bounds.
+        for p, t in trees.items():
+            if p not in expected or not p.endswith('PFJetAnalyzer/t'):
+                continue
+            for name in ('jtPfCM', 'jtPfNM'):
+                if name not in t:
+                    continue
+                b = t[name]
+                if b.typename != 'int32_t[]' or b.count_branch is None or b.count_branch.name != 'nref':
+                    errors.append(p + '/' + name + ' must be an Int_t array indexed by nref')
+            needed = {'jtPfCM', 'jtPfNM', 'jtPfCHM', 'jtPfNHM', 'jtPfCEM', 'jtPfNEM', 'jtPfMUM'}
+            if needed <= set(t.keys()):
+                import awkward as ak
+                for v in t.iterate(sorted(needed), step_size='25 MB', library='ak'):
+                    charged = v['jtPfCHM'] + v['jtPfCEM'] + v['jtPfMUM']
+                    neutral = v['jtPfNHM'] + v['jtPfNEM']
+                    if not bool(ak.all((v['jtPfCM'] >= charged) & (v['jtPfNM'] >= neutral))):
+                        errors.append(p + ': full PF counts are below the category sums')
+                        break
         # Validate the actual L1 payload representation and values, without a rho=0
         # or geometric-area fallback. Stored R8 area is inspected too; current EEC
         # L1FastJet calibration itself supports ppRef R4 only.

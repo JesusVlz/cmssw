@@ -166,6 +166,9 @@ private:
     int jtPfCEM[MAXJETS] = {0};
     int jtPfNEM[MAXJETS] = {0};
     int jtPfMUM[MAXJETS] = {0};
+    // Aggregate PF multiplicities include the HF categories omitted above.
+    int jtPfCM[MAXJETS] = {0};
+    int jtPfNM[MAXJETS] = {0};
 
     float jttau1[MAXJETS] = {0};
     float jttau2[MAXJETS] = {0};

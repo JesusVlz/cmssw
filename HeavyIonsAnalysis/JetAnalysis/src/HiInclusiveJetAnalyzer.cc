@@ -191,6 +191,8 @@ void HiInclusiveJetAnalyzer::beginJob() {
   bookBranch("jtPfCEM", jets_.jtPfCEM, "jtPfCEM[nref]/I");
   bookBranch("jtPfNEM", jets_.jtPfNEM, "jtPfNEM[nref]/I");
   bookBranch("jtPfMUM", jets_.jtPfMUM, "jtPfMUM[nref]/I");
+  bookBranch("jtPfCM", jets_.jtPfCM, "jtPfCM[nref]/I");
+  bookBranch("jtPfNM", jets_.jtPfNM, "jtPfNM[nref]/I");
 
   bookBranch("jttau1", jets_.jttau1, "jttau1[nref]/F");
   bookBranch("jttau2", jets_.jttau2, "jttau2[nref]/F");
@@ -812,6 +814,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       jets_.jtPfCEM[jets_.nref] = jet.electronMultiplicity();
       jets_.jtPfNEM[jets_.nref] = jet.photonMultiplicity();
       jets_.jtPfMUM[jets_.nref] = jet.muonMultiplicity();
+      jets_.jtPfCM[jets_.nref] = jet.chargedMultiplicity();
+      jets_.jtPfNM[jets_.nref] = jet.neutralMultiplicity();
     } else {
       jets_.jtPfCHF[jets_.nref] = 0;
       jets_.jtPfNHF[jets_.nref] = 0;
@@ -824,6 +828,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       jets_.jtPfCEM[jets_.nref] = 0;
       jets_.jtPfNEM[jets_.nref] = 0;
       jets_.jtPfMUM[jets_.nref] = 0;
+      jets_.jtPfCM[jets_.nref] = 0;
+      jets_.jtPfNM[jets_.nref] = 0;
     }
 
     //    if(isMC_){

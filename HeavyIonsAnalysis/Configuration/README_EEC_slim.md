@@ -4,7 +4,7 @@ This contract was rechecked against every file in
 [energyEnergyCorrelatorAnalysis/src at 792d76c](https://github.com/JesusVlz/energyEnergyCorrelatorAnalysis/tree/792d76c0cd043ab1871b3217ac988f6455f2d9f0/src)
 and against the uploaded OO data file `L1_object_data_6040.root`.
 
-Use this producer revision with [the companion EEC reader update](https://github.com/JesusVlz/energyEnergyCorrelatorAnalysis/commit/75c1d861ec1bd2696a96187bea1b89fb027e089d) that makes
+Use this producer revision with [the companion EEC reader update](https://github.com/JesusVlz/energyEnergyCorrelatorAnalysis/commit/b2d61d8840614fe8a966b1e53501131545ba1278) that makes
 the five unused Run-3 legacy track fields optional. The older EEC main still
 opens those fields unconditionally. The change preserves PbPb reader behavior.
 
@@ -27,13 +27,14 @@ All event trees remain in the same accepted-event order.
 | Same | OO MC additions | `OOphfCoincFilterPF2Th4, pileupVertexFilter` |
 | `PbPbTracks/trackTree` (OO) or `ppTracks/trackTree` (ppRef) | All | `nTrk, trkPt, trkEta, trkPhi, trkPtError, highPurity, trkDzFirstVtx, trkDzErrFirstVtx, trkDxyFirstVtx, trkDxyErrFirstVtx, trkCharge` |
 | `akCs4PFJetAnalyzer/t`, `akCs8PFJetAnalyzer/t` (OO) or `ak4PFJetAnalyzer/t`, `ak8PFJetAnalyzer/t` (ppRef) | All | `nref, rawpt, jtpt, jteta, jtphi, WTAeta, WTAphi, trackMax, jtarea, jtPfCHF, jtPfNHF, jtPfCEF, jtPfNEF, jtPfMUF, jtPfCHM, jtPfNHM, jtPfCEM, jtPfNEM, jtPfMUM` |
+| Same jet trees | ppRef additions | `jtPfCM, jtPfNM` |
 | Same jet trees | MC additions | `refpt, refeta, refphi, refparton_flavorForB, ngen, genpt, geneta, genphi, WTAgeneta, WTAgenphi` |
 | `HiGenParticleAna/hi` | MC | `pt, eta, phi, chg, sube` |
 | `ggHiNtuplizer/EventTree` | ppRef | Scalar `rho`, with `run, event, lumis` for alignment/provenance |
 | `HiForestInfo/HiForest` | All | Existing small metadata payload; its presence is also used by GeneratorLevelForestReader for format detection |
 
-The final track, data-jet, MC-jet, and generator-particle lists have 11,
-19, 29, and 5 branches respectively. Canonical physical event identity
+The track and generator-particle lists have 11 and 5 branches. Jet trees
+have 19/29 branches for OO data/MC and 21/31 for ppRef data/MC respectively. Canonical physical event identity
 stays in HiTree with unsigned 64-bit `evt`; duplicate/truncated jet IDs
 are omitted.
 
@@ -48,6 +49,25 @@ with `applyTrackSelections=False`. Generator output keeps stable charged
 particles with pT >= 0.5 GeV and the existing |eta| <= 2.5 range. Generator-jet
 reconstruction has its own input, independently of the particle-output cut.
 `sube` filling and its missing-product sentinel are preserved.
+
+## Full PF multiplicities for pp Jet ID
+
+The original five category counts omit HF hadron and HF EM constituents.
+The ppRef slim configuration also saves native Int_t[nref] branches `jtPfCM` and
+`jtPfNM`, filled from `pat::Jet::chargedMultiplicity()` and
+`pat::Jet::neutralMultiplicity()`. Their sum is the constituent count used by
+CMSSW's [PFJetIDSelectionFunctor](https://github.com/JesusVlz/cmssw/blob/35f008fbb78ac9bca6db693047de4b9d64bd8126/PhysicsTools/SelectorUtils/interface/PFJetIDSelectionFunctor.h#L280).
+No geometric or category-only total is inferred.
+
+Use the matching EEC reader/Jet-ID update. It prefers the exact pair for
+Tight/TightLeptonVeto and MiniPOGpp. The legacy HINpp prescription continues
+to use its explicitly defined category sums. Old forests without the exact
+pair retain the lower-bound guard: unresolved thresholds still raise an error.
+The pair must be present together, with stable types/presence across a chain.
+Previously produced forests need regeneration to resolve this missing input.
+This adds two integers per ppRef jet and changes no Jet ID threshold or JEC payload.
+The default OO miniPOG prescription does not need these aggregate counts,
+so its output list remains unchanged.
 
 ## Triggers and filters
 

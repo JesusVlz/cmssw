@@ -21,6 +21,8 @@ JET_BRANCHES = (
     "jtPfCHM", "jtPfNHM", "jtPfCEM", "jtPfNEM", "jtPfMUM",
 )
 
+PP_JET_MULTIPLICITY_BRANCHES = ("jtPfCM", "jtPfNM")
+
 MC_JET_BRANCHES = (
     "refpt", "refeta", "refphi", "refparton_flavorForB",
     "ngen", "genpt", "geneta", "genphi", "WTAgeneta", "WTAgenphi",
@@ -61,7 +63,8 @@ def configureEECSlimForest(process, isMC, isOO):
         label = ("akCs" if isOO else "ak") + radius + "PFJetAnalyzer"
         jets = getattr(process, label)
         jets.branchesToKeep = cms.untracked.vstring(
-            *(JET_BRANCHES + (MC_JET_BRANCHES if isMC else ()))
+            *(JET_BRANCHES + (() if isOO else PP_JET_MULTIPLICITY_BRANCHES)
+              + (MC_JET_BRANCHES if isMC else ()))
         )
         jets.doWTARecluster = cms.untracked.bool(True)
         jets.doHiJetID = cms.untracked.bool(True)  # Required to fill trackMax.
