@@ -173,7 +173,7 @@ jetAbsEtaMax = 2.5
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
 doWTARecluster = True        # Add jet phi and eta for WTA axis
-doBtagging  =  True         # Note that setting to True increases computing time a lot
+doBtagging = False           # EEC does not consume b-tag discriminator branches
 
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
 # Add all the values you want to process to the list
@@ -234,3 +234,7 @@ process.OOphfCoincFilterPF2Th4 = cms.Path(process.phfCoincFilterPF2Th4)
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
+
+# Save the EEC input contract directly during forest production.
+from HeavyIonsAnalysis.Configuration.eecSlimContent_cff import configureEECSlimForest
+configureEECSlimForest(process, isMC=False, isOO=False)

@@ -4,6 +4,7 @@
 // system include files
 #include <memory>
 #include <string>
+#include <vector>
 #include <iostream>
 
 // ROOT headers
@@ -46,6 +47,8 @@ public:
   void beginJob() override;
 
 private:
+  std::vector<std::string> branchesToKeep_;  // Empty preserves the complete legacy tree.
+
   // for reWTA reclustering-----------------------
   bool doWTARecluster_ = false;
   fastjet::JetDefinition WTAjtDef =

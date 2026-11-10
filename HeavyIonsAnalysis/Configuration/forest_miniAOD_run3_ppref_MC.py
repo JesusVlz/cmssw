@@ -155,7 +155,7 @@ jetAbsEtaMax = 2.5
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
 doWTARecluster = True        # Add jet phi and eta for WTA axis
-doBtagging  =  False         # Note that setting to True increases computing time a lot
+doBtagging = False           # EEC does not consume b-tag discriminator branches
 
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
 # Generator level jets in original miniAOD jets contain neutrinos
@@ -214,3 +214,7 @@ process.ppNoScrapingSequence = cms.Sequence(
 process.ppNoScrapingFilter = cms.Path(process.ppNoScrapingSequence)
 
 process.MessageLogger.cerr.FwkReport.reportEvery = 300
+
+# Save the EEC input contract directly during forest production.
+from HeavyIonsAnalysis.Configuration.eecSlimContent_cff import configureEECSlimForest
+configureEECSlimForest(process, isMC=True, isOO=False)
