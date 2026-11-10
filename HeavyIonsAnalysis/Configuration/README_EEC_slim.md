@@ -34,6 +34,53 @@ collection, independently of the filtered generator-particle output.
 `jtPf*` composition branches are independent inputs for the current PF
 Jet ID/veto code. `jtarea` remains the measured PAT jet area.
 
+## Event, trigger and filter trees required by HighForestReader
+
+The following paths refer to ROOT output directories and trees. The EEC
+source is `src/HighForestReader.cxx` at revision
+`792d76c0cd043ab1871b3217ac988f6455f2d9f0`. These event/selection trees
+are preserved by the slim configuration; the particle/jet allowlists do
+not modify them.
+
+| ROOT tree | Branches | Samples / condition |
+| --- | --- | --- |
+| `hiEvtAnalyzer/HiTree` | `run`, `lumi`, `evt`, `vz` | All; preserve canonical physical event identity, with unsigned 64-bit `evt` |
+| `hiEvtAnalyzer/HiTree` | `hiHFPlus_pf`, `hiHFMinus_pf` | Opened by the ordinary OO and ppRef readers for activity/mixing inputs |
+| `hiEvtAnalyzer/HiTree` | `hiBin` | OO data and MC; ppRef reader uses `hiBin=-1` |
+| `hiEvtAnalyzer/HiTree` | `pthat`, `weight` | Both MC samples |
+| `hiEvtAnalyzer/HiTree` | `hiHF_pf` | Retained for the OO generator mixing pilot; ordinary HighForestReader uses the two sides |
+| `hltanalysis/HltTree` | `HLT_MinimumBiasHF_OR_BptxAND_v1` | OO when trigger selection is enabled |
+| `hltanalysis/HltTree` | `HLT_PPRefZeroBias_v6` | ppRef when trigger selection is enabled |
+| `skimanalysis/HltTree` | `pprimaryVertexFilter` | All four samples |
+| `skimanalysis/HltTree` | `OOpfCoincFilterPF2Th4`, `pileupVertexFilter` | OO data |
+| `skimanalysis/HltTree` | `OOphfCoincFilterPF2Th4`, `pileupVertexFilter` | OO MC; the additional `h` is intentional in the current producer/reader pair |
+| `ggHiNtuplizer/EventTree` | `rho` | ppRef optional L1FastJet companion reader; tree also saves event identifiers |
+
+Current data cards use `TriggerSelection 8`. MC cards use
+`TriggerSelection 0`, so MC does not require the HLT decision branches for
+that setting, although the configurations continue to save HLT output.
+The legacy getter named `GetCaloJet15FilterBit()` carries the OO
+minimum-bias or ppRef zero-bias decision; this does not impose a 15 GeV
+jet-trigger requirement. The saved exact HLT version must match the reader.
+
+The OO data producer's `HLTPaths` wildcard
+`HLT_MinimumBiasHF_OR_BptxAND_v*` selects events upstream. The
+`HLT_OxyL1SingleJet*` pattern remains commented out. This upstream
+selection and the downstream saved HLT decision are distinct.
+
+For OO, HighForestReader sets the HBHE, beam-scraping and cluster
+compatibility bits to pass rather than opening their branches. For ppRef,
+it also sets the HF and pileup bits to pass. Thus
+`pclusterCompatibilityFilter`, `ppNoScrapingFilter`, and extra HF threshold
+bits may be written by the configurations but are not used by the current
+OO/ppRef event cuts. They have not been pruned by this change.
+
+Keep the reconstructed jet and track paths in the branch table above, plus
+`HiGenParticleAna/hi` in MC. In standard non-mega-skim running the event,
+jet, track, HLT (when enabled), skim, generator and rho companion trees must
+remain in event-entry order. `HiForestInfo/HiForest` is job metadata and
+does not have one entry per physics event.
+
 ## Other output
 
 B tagging is disabled both when setting up the jet production tasks and in
