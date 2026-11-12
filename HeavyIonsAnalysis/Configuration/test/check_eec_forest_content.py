@@ -46,10 +46,7 @@ def expected_content(sample, l1=False):
     else:
         expected['hltanalysis/HltTree'] = {
             'HLT_MinimumBiasHF_OR_BptxAND_v1' if oo else 'HLT_PPRefZeroBias_v6'}
-    if oo:
-        expected['rhoAnalysis/t'] = {'etaMin', 'etaMax', 'rho'}
-    else:
-        expected['ggHiNtuplizer/EventTree'] = {'run', 'event', 'lumis', 'rho'}
+    expected['ggHiNtuplizer/EventTree'] = {'run', 'event', 'lumis', 'rho'}
     return expected
 
 
@@ -113,35 +110,19 @@ def inspect(path, sample, l1=False, strict=False, inventory=None):
                     if not bool(ak.all((v['jtPfCM'] >= charged) & (v['jtPfNM'] >= neutral))):
                         errors.append(p + ': full PF counts are below the category sums')
                         break
-        # OO rho is a per-event eta profile; reject malformed bin vectors.
-        if sample.startswith('oo-') and 'rhoAnalysis/t' in trees:
-            rho_tree = trees['rhoAnalysis/t']
-            if {'etaMin', 'etaMax', 'rho'} <= set(rho_tree.keys()):
-                import awkward as ak
-                for values in rho_tree.iterate(['etaMin', 'etaMax', 'rho'],
-                                               step_size='25 MB', library='ak'):
-                    lo, hi, rho = values['etaMin'], values['etaMax'], values['rho']
-                    if not bool(ak.all((ak.num(lo) == ak.num(hi)) &
-                                       (ak.num(lo) == ak.num(rho)))):
-                        errors.append('rhoAnalysis/t: eta/rho vector lengths differ')
-                        break
-                    if not bool(ak.all(np.isfinite(lo) & np.isfinite(hi) &
-                                       np.isfinite(rho) & (lo < hi))):
-                        errors.append('rhoAnalysis/t: invalid eta bins or rho values')
-                        break
-        # Validate the actual L1 payload representation and values, without a rho=0
-        # or geometric-area fallback. Stored R8 area is inspected too; current EEC
-        # L1FastJet calibration itself supports ppRef R4 only.
+        # Both OO and ppRef retain the MiniAOD event-level FastJet rho.
+        rho_tree = trees.get('ggHiNtuplizer/EventTree')
+        if rho_tree is not None and 'rho' in rho_tree:
+            rho = rho_tree['rho']
+            if rho.typename not in ('float', 'double', 'Float_t', 'Double_t'):
+                errors.append('rho must be a Float_t/Double_t scalar')
+            for values in rho_tree.iterate(['rho'], step_size='25 MB', library='np'):
+                if not np.all(np.isfinite(values['rho']) & (values['rho'] >= 0)):
+                    errors.append('rho has nonfinite or negative values')
+                    break
+        # Validate measured jet area when checking the current ppRef L1 input.
+        # R8 area is also stored; the current calibration supports ppRef R4.
         if l1:
-            rho_tree = trees.get('ggHiNtuplizer/EventTree')
-            if rho_tree is not None and 'rho' in rho_tree:
-                rho = rho_tree['rho']
-                if rho.typename not in ('float', 'double', 'Float_t', 'Double_t'):
-                    errors.append('rho must be a Float_t/Double_t scalar')
-                for values in rho_tree.iterate(['rho'], step_size='25 MB', library='np'):
-                    if not np.all(np.isfinite(values['rho']) & (values['rho'] >= 0)):
-                        errors.append('rho has nonfinite or negative values')
-                        break
             for p, t in trees.items():
                 if p not in expected or not p.endswith('PFJetAnalyzer/t'):
                     continue
