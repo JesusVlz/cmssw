@@ -9,7 +9,9 @@ the five unused Run-3 legacy track fields optional. The older EEC main still
 opens those fields unconditionally. The change preserves PbPb reader behavior.
 
 All four production configurations keep R4/R8, `jetPtMin=15` GeV,
-`jetAbsEtaMax=2.5`, WTA and the current PF Jet ID/veto inputs. These are
+`jetAbsEtaMax=2.5`, WTA and the current PF Jet ID/veto inputs.
+OO additionally retains the complete heavy-ion jet composition block and
+the eta-binned rho profile for possible future corrections. These are
 retention settings, not proof of veto coverage outside that eta range.
 All event trees remain in the same accepted-event order.
 
@@ -27,14 +29,16 @@ All event trees remain in the same accepted-event order.
 | Same | OO MC additions | `OOphfCoincFilterPF2Th4, pileupVertexFilter` |
 | `PbPbTracks/trackTree` (OO) or `ppTracks/trackTree` (ppRef) | All | `nTrk, trkPt, trkEta, trkPhi, trkPtError, highPurity, trkDzFirstVtx, trkDzErrFirstVtx, trkDxyFirstVtx, trkDxyErrFirstVtx, trkCharge` |
 | `akCs4PFJetAnalyzer/t`, `akCs8PFJetAnalyzer/t` (OO) or `ak4PFJetAnalyzer/t`, `ak8PFJetAnalyzer/t` (ppRef) | All | `nref, rawpt, jtpt, jteta, jtphi, WTAeta, WTAphi, trackMax, jtarea, jtPfCHF, jtPfNHF, jtPfCEF, jtPfNEF, jtPfMUF, jtPfCHM, jtPfNHM, jtPfCEM, jtPfNEM, jtPfMUM` |
-| Same jet trees | ppRef additions | `jtPfCM, jtPfNM` |
+| Same jet trees | All PF jet additions | `jtPfCM, jtPfNM` |
+| Same jet trees | OO additions | `trackSum, trackN, trackHardSum, trackHardN, chargedMax, chargedSum, chargedN, chargedHardSum, chargedHardN, photonMax, photonSum, photonN, photonHardSum, photonHardN, neutralMax, neutralSum, neutralN, eMax, eSum, eN, muMax, muSum, muN` |
 | Same jet trees | MC additions | `refpt, refeta, refphi, refparton_flavorForB, ngen, genpt, geneta, genphi, WTAgeneta, WTAgenphi` |
 | `HiGenParticleAna/hi` | MC | `pt, eta, phi, chg, sube` |
+| `rhoAnalysis/t` | OO | Eta-binned vectors `etaMin, etaMax, rho`, produced from `hiPuRho` |
 | `ggHiNtuplizer/EventTree` | ppRef | Scalar `rho`, with `run, event, lumis` for alignment/provenance |
 | `HiForestInfo/HiForest` | All | Existing small metadata payload; its presence is also used by GeneratorLevelForestReader for format detection |
 
 The track and generator-particle lists have 11 and 5 branches. Jet trees
-have 19/29 branches for OO data/MC and 21/31 for ppRef data/MC respectively. Canonical physical event identity
+have 44/54 branches for OO data/MC and 21/31 for ppRef data/MC respectively. Canonical physical event identity
 stays in HiTree with unsigned 64-bit `evt`; duplicate/truncated jet IDs
 are omitted.
 
@@ -50,10 +54,10 @@ particles with pT >= 0.5 GeV and the existing |eta| <= 2.5 range. Generator-jet
 reconstruction has its own input, independently of the particle-output cut.
 `sube` filling and its missing-product sentinel are preserved.
 
-## Full PF multiplicities for pp Jet ID
+## Full PF multiplicities and OO jet composition
 
 The original five category counts omit HF hadron and HF EM constituents.
-The ppRef slim configuration also saves native Int_t[nref] branches `jtPfCM` and
+Both OO and ppRef slim configurations save native Int_t[nref] branches `jtPfCM` and
 `jtPfNM`, filled from `pat::Jet::chargedMultiplicity()` and
 `pat::Jet::neutralMultiplicity()`. Their sum is the constituent count used by
 CMSSW's [PFJetIDSelectionFunctor](https://github.com/JesusVlz/cmssw/blob/35f008fbb78ac9bca6db693047de4b9d64bd8126/PhysicsTools/SelectorUtils/interface/PFJetIDSelectionFunctor.h#L280).
@@ -65,9 +69,10 @@ to use its explicitly defined category sums. Old forests without the exact
 pair retain the lower-bound guard: unresolved thresholds still raise an error.
 The pair must be present together, with stable types/presence across a chain.
 Previously produced forests need regeneration to resolve this missing input.
-This adds two integers per ppRef jet and changes no Jet ID threshold or JEC payload.
-The default OO miniPOG prescription does not need these aggregate counts,
-so its output list remains unchanged.
+This adds two integers per jet for OO and ppRef and changes no Jet ID
+threshold or JEC payload. OO also retains all 24 `doHiJetID` composition
+branches (including `trackMax`, which the EEC reader already uses) for both
+R4 and R8, even when the nominal OO ID does not read every field.
 
 ## Triggers and filters
 
@@ -102,8 +107,12 @@ The measured area is also retained for R8. Producing it does not extend the
 current analysis calibration to R8 or OO. No zero-rho, geometric-area, or
 branch-renaming fallback is introduced.
 
-OO `rhoAnalysis/t` is an eta-binned vector profile, not this scalar rho.
-It and all OO random-cone trees remain removed. pp centrality remains off.
+OO `rhoAnalysis/t` now stores the eta-binned `hiPuRho` profile in
+both data and MC: `etaMin`, `etaMax`, and `rho` vectors. The rho
+analyzer runs after the jet setup on the forest path and keeps the same
+accepted-event order. This is distinct from the ppRef scalar rho and does
+not yet enable an OO L1FastJet correction in the EEC analysis. OO random-cone
+trees remain removed. pp centrality remains off.
 The required pp PF-HF sums are now populated with `doPFHF=True` independently
 of centrality; these HF sums are not the L1FastJet rho input.
 
@@ -113,7 +122,7 @@ The supplied file has 26,708 events and 12 trees. All physics trees have the
 same event count; HiForest metadata has one job entry. This is an older
 jet-analyzer schema, not output from the updated slim producer.
 
-| Tree/group | Existing branches | Final retained branches | Existing compressed branch bytes |
+| Tree/group | Existing branches | Prior slim target | Existing compressed branch bytes |
 | --- | ---: | ---: | ---: |
 | HLT | 1540 | 1 | 1,886,856 |
 | Skim | 8 | 3 | 54,446 |
@@ -124,12 +133,12 @@ jet-analyzer schema, not output from the updated slim producer.
 | Four random-cone trees | 5 each | 0 | 2,929,238 |
 | HiForest metadata | 3 | 3 | 305 |
 
-The track tree accounts for about 93% of the current compressed branch
-payload. The retained existing branches sum to 118,168,447 bytes out of
-247,227,257 bytes: roughly 52% of the current payload is outside the final
-contract. This comparison excludes the required jet inputs absent from the
-file and precedes particle retention cuts. It is not a prediction of new
-ROOT file size or compression.
+The track tree accounts for about 93% of the old file's compressed branch
+payload. This table and the earlier 118,168,447 / 247,227,257 byte estimate
+refer to the prior contract (19 OO jet branches and no rho profile); they
+must not be used as a size estimate for the updated OO contract. The new
+44-branch OO jet trees and three-branch rho tree need a fresh forest to
+measure their storage.
 
 The sample contains 4,348,262 tracks. Of those, 2,276,391 (52.35%) satisfy the
 production retention pT/eta cuts. Quality filtering remains downstream.
@@ -142,6 +151,8 @@ Both uploaded jet trees lack `rawpt, trackMax, jtarea` and all ten
 `jtptUncorrected` and `chargedMax`. The latter are not automatically renamed:
 the current native input contract and measured area cannot be recovered by
 pruning. Reforest with the updated analyzer for current Run-3 selection/JEC.
+The older composition fields that are present remain retained in the new OO
+contract.
 The sample also lacks the pp scalar rho tree; it is OO data and the ppRef
 L1FastJet option does not apply to it.
 
@@ -154,7 +165,8 @@ and numpy. For example, from the CMSSW src directory:
 
 ```bash
 python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD.root --sample oo-data --strict --inventory forest_inventory.csv
-python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD.root --sample pp-data --strict --l1
+python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD_MC.root --sample oo-mc --strict
+python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD_ppref.root --sample pp-data --strict --l1
 ```
 
 These changes include C++; run `scram b -j 4` and rebuild the companion EEC
