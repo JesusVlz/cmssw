@@ -175,3 +175,34 @@ analysis before running. The uploaded file was inspected with uproot, and
 offline branch-contract/booking checks were run. Full CMSSW and EEC event-loop
 execution is still required; no numerical reduction in newly produced file
 size is claimed.
+
+## Nebraska CRAB production
+
+The OO data list `datasets_OO_DATA.txt` contains `IonPhysics0` through
+`IonPhysics59`. The data submission script makes one CRAB task per dataset
+and skips a request whose local CRAB project directory already exists.
+All tasks use the OO slim data or MC pset and store TFileService output at
+`T2_US_Nebraska` beneath `/store/user/jvelazqu/HiForest/OO2025/DATA`
+or `/store/user/jvelazqu/HiForest/OO2025/MC`. The new
+`Nebraska_slim_v1` request names separate these outputs from earlier runs.
+The data task keeps the OO golden JSON mask. The current MC config uses the
+`QCD-dijet_Pthat-15_TuneCP5_OO_5p36TeV_pythia8` MINIAODSIM dataset.
+
+From `HeavyIonsAnalysis/Configuration` on lxplus, after updating this branch
+and running `cmsenv` and `scram b -j 4`:
+
+```bash
+bash submit_multidataset_OO_DATA.sh --dry-run
+bash submit_multidataset_OO_DATA.sh 2>&1 | tee submit_OO_DATA_Nebraska_slim.log
+
+crab submit -c crab_OO_MC.py
+crab status -d crab_projects/OO2025_MC_Nebraska_slim/crab_HiForest_OO2025_MC_Pythia8_Nebraska_slim_v1
+```
+
+To try one data stream first, put just its dataset name in a separate text
+file and pass that file to the same script. The defaults are 50,000 events
+per data job and 30,000 per MC job with `EventAwareLumiBased` splitting.
+CRAB overrides the small interactive `process.maxEvents` values in these
+psets. Check the CRAB status and job count before submitting all streams;
+if a task exceeds CRAB's job limit, raise its `Data.unitsPerJob` and use
+a new request version. No correction is applied by storing OO scalar rho.
