@@ -11,7 +11,7 @@ opens those fields unconditionally. The change preserves PbPb reader behavior.
 All four production configurations keep R4/R8, `jetPtMin=15` GeV,
 `jetAbsEtaMax=2.5`, WTA and the current PF Jet ID/veto inputs.
 OO additionally retains the complete heavy-ion jet composition block and
-the eta-binned rho profile for possible future corrections. These are
+the MiniAOD event-level scalar rho for possible future corrections. These are
 retention settings, not proof of veto coverage outside that eta range.
 All event trees remain in the same accepted-event order.
 
@@ -33,8 +33,7 @@ All event trees remain in the same accepted-event order.
 | Same jet trees | OO additions | `trackSum, trackN, trackHardSum, trackHardN, chargedMax, chargedSum, chargedN, chargedHardSum, chargedHardN, photonMax, photonSum, photonN, photonHardSum, photonHardN, neutralMax, neutralSum, neutralN, eMax, eSum, eN, muMax, muSum, muN` |
 | Same jet trees | MC additions | `refpt, refeta, refphi, refparton_flavorForB, ngen, genpt, geneta, genphi, WTAgeneta, WTAgenphi` |
 | `HiGenParticleAna/hi` | MC | `pt, eta, phi, chg, sube` |
-| `rhoAnalysis/t` | OO | Eta-binned vectors `etaMin, etaMax, rho`, produced from `hiPuRho` |
-| `ggHiNtuplizer/EventTree` | ppRef | Scalar `rho`, with `run, event, lumis` for alignment/provenance |
+| `ggHiNtuplizer/EventTree` | OO and ppRef | Scalar `rho` from `fixedGridRhoFastjetAll`, with `run, event, lumis` for alignment/provenance |
 | `HiForestInfo/HiForest` | All | Existing small metadata payload; its presence is also used by GeneratorLevelForestReader for format detection |
 
 The track and generator-particle lists have 11 and 5 branches. Jet trees
@@ -95,7 +94,8 @@ Current OO/ppRef readers set the unused noise/scraping/cluster bits to pass.
 ## FastJet and PF-HF inputs
 
 The optional analysis flag is `Run3UsePpL1FastJet 1` with `Run3JEC 1`.
-The implementation currently supports ppRef R4. It uses:
+The implementation currently supports ppRef R4. The same input payload is
+retained in OO for a possible future correction. The ppRef correction uses:
 
 - `ggHiNtuplizer/EventTree/rho`: scalar Float_t/Double_t, copied from
   `fixedGridRhoFastjetAll`;
@@ -107,12 +107,12 @@ The measured area is also retained for R8. Producing it does not extend the
 current analysis calibration to R8 or OO. No zero-rho, geometric-area, or
 branch-renaming fallback is introduced.
 
-OO `rhoAnalysis/t` now stores the eta-binned `hiPuRho` profile in
-both data and MC: `etaMin`, `etaMax`, and `rho` vectors. The rho
-analyzer runs after the jet setup on the forest path and keeps the same
-accepted-event order. This is distinct from the ppRef scalar rho and does
-not yet enable an OO L1FastJet correction in the EEC analysis. OO random-cone
-trees remain removed. pp centrality remains off.
+OO data and MC now schedule `ggHiNtuplizer` with object output disabled,
+reading `fixedGridRhoFastjetAll` and writing the same four branches as
+ppRef: `run, event, lumis, rho`. The eta-binned `rhoAnalysis/t` tree
+and OO random-cone trees remain removed. Saving the scalar does not yet
+enable an OO L1FastJet correction in the EEC analysis. pp centrality
+remains off.
 The required pp PF-HF sums are now populated with `doPFHF=True` independently
 of centrality; these HF sums are not the L1FastJet rho input.
 
@@ -135,9 +135,9 @@ jet-analyzer schema, not output from the updated slim producer.
 
 The track tree accounts for about 93% of the old file's compressed branch
 payload. This table and the earlier 118,168,447 / 247,227,257 byte estimate
-refer to the prior contract (19 OO jet branches and no rho profile); they
-must not be used as a size estimate for the updated OO contract. The new
-44-branch OO jet trees and three-branch rho tree need a fresh forest to
+refer to the prior contract (19 OO jet branches and no stored scalar rho);
+they must not be used as a size estimate for the updated OO contract. The new
+44-branch OO jet trees and four-branch scalar rho tree need a fresh forest to
 measure their storage.
 
 The sample contains 4,348,262 tracks. Of those, 2,276,391 (52.35%) satisfy the
@@ -153,8 +153,9 @@ the current native input contract and measured area cannot be recovered by
 pruning. Reforest with the updated analyzer for current Run-3 selection/JEC.
 The older composition fields that are present remain retained in the new OO
 contract.
-The sample also lacks the pp scalar rho tree; it is OO data and the ppRef
-L1FastJet option does not apply to it.
+The old OO sample also lacks the scalar rho tree; new OO forests will store
+the same scalar as ppRef, although the current EEC L1FastJet option does not
+apply to OO.
 
 ## Checking new files
 
@@ -164,8 +165,8 @@ the native rho/area representation and values. It requires uproot, awkward,
 and numpy. For example, from the CMSSW src directory:
 
 ```bash
-python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD.root --sample oo-data --strict --inventory forest_inventory.csv
-python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD_MC.root --sample oo-mc --strict
+python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HeavyIonsAnalysis/Configuration/L1_object_data.root --sample oo-data --strict --inventory forest_inventory.csv
+python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HeavyIonsAnalysis/Configuration/unembedded_L1HLT_objects_MC.root --sample oo-mc --strict
 python3 HeavyIonsAnalysis/Configuration/test/check_eec_forest_content.py HiForestMiniAOD_ppref.root --sample pp-data --strict --l1
 ```
 
