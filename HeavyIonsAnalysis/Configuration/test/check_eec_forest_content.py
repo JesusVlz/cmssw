@@ -23,8 +23,13 @@ def expected_content(sample, l1=False):
     jets = {'nref', 'rawpt', 'jtpt', 'jteta', 'jtphi', 'WTAeta', 'WTAphi',
             'trackMax', 'jtarea', 'jtPfCHF', 'jtPfNHF', 'jtPfCEF', 'jtPfNEF',
             'jtPfMUF', 'jtPfCHM', 'jtPfNHM', 'jtPfCEM', 'jtPfNEM', 'jtPfMUM'}
-    if not oo:
-        jets |= {'jtPfCM', 'jtPfNM'}
+    jets |= {'jtPfCM', 'jtPfNM'}
+    if oo:
+        jets |= {'trackSum', 'trackN', 'trackHardSum', 'trackHardN',
+                 'chargedMax', 'chargedSum', 'chargedN', 'chargedHardSum',
+                 'chargedHardN', 'photonMax', 'photonSum', 'photonN',
+                 'photonHardSum', 'photonHardN', 'neutralMax', 'neutralSum',
+                 'neutralN', 'eMax', 'eSum', 'eN', 'muMax', 'muSum', 'muN'}
     if mc:
         jets |= {'refpt', 'refeta', 'refphi', 'refparton_flavorForB', 'ngen',
                  'genpt', 'geneta', 'genphi', 'WTAgeneta', 'WTAgenphi'}
@@ -41,7 +46,9 @@ def expected_content(sample, l1=False):
     else:
         expected['hltanalysis/HltTree'] = {
             'HLT_MinimumBiasHF_OR_BptxAND_v1' if oo else 'HLT_PPRefZeroBias_v6'}
-    if not oo:
+    if oo:
+        expected['rhoAnalysis/t'] = {'etaMin', 'etaMax', 'rho'}
+    else:
         expected['ggHiNtuplizer/EventTree'] = {'run', 'event', 'lumis', 'rho'}
     return expected
 
@@ -105,6 +112,22 @@ def inspect(path, sample, l1=False, strict=False, inventory=None):
                     neutral = v['jtPfNHM'] + v['jtPfNEM']
                     if not bool(ak.all((v['jtPfCM'] >= charged) & (v['jtPfNM'] >= neutral))):
                         errors.append(p + ': full PF counts are below the category sums')
+                        break
+        # OO rho is a per-event eta profile; reject malformed bin vectors.
+        if sample.startswith('oo-') and 'rhoAnalysis/t' in trees:
+            rho_tree = trees['rhoAnalysis/t']
+            if {'etaMin', 'etaMax', 'rho'} <= set(rho_tree.keys()):
+                import awkward as ak
+                for values in rho_tree.iterate(['etaMin', 'etaMax', 'rho'],
+                                               step_size='25 MB', library='ak'):
+                    lo, hi, rho = values['etaMin'], values['etaMax'], values['rho']
+                    if not bool(ak.all((ak.num(lo) == ak.num(hi)) &
+                                       (ak.num(lo) == ak.num(rho)))):
+                        errors.append('rhoAnalysis/t: eta/rho vector lengths differ')
+                        break
+                    if not bool(ak.all(np.isfinite(lo) & np.isfinite(hi) &
+                                       np.isfinite(rho) & (lo < hi))):
+                        errors.append('rhoAnalysis/t: invalid eta bins or rho values')
                         break
         # Validate the actual L1 payload representation and values, without a rho=0
         # or geometric-area fallback. Stored R8 area is inspected too; current EEC
