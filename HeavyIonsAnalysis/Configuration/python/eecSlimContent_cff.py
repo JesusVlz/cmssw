@@ -92,10 +92,18 @@ def configureEECSlimForest(process, isMC, isOO):
             jets.fillGenJets = cms.untracked.bool(True)
 
     if isOO:
-        # Store the eta-binned hiPuRho profile for a future OO correction.
-        # The current EEC L1FastJet option uses the separate ppRef scalar rho.
-        process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
-        process.forest += process.rhoAnalysis
+        # Match the ppRef event-level rho payload while preserving OO's
+        # existing EEC trees and selections. The OO correction is not yet enabled.
+        ntupler = process.ggHiNtuplizer
+        ntupler.rhoSrc = cms.InputTag("fixedGridRhoFastjetAll")
+        ntupler.doGenParticles = cms.bool(False)
+        ntupler.doSuperClusters = cms.bool(False)
+        ntupler.doElectrons = cms.bool(False)
+        ntupler.doPhotons = cms.bool(False)
+        ntupler.doMuons = cms.bool(False)
+        ntupler.doPfIso = cms.bool(False)
+        ntupler.useValMapIso = cms.bool(False)
+        process.forest += ntupler
 
     if isMC:
         particles = process.HiGenParticleAna
