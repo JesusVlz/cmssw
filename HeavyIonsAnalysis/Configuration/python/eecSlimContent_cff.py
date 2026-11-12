@@ -21,7 +21,18 @@ JET_BRANCHES = (
     "jtPfCHM", "jtPfNHM", "jtPfCEM", "jtPfNEM", "jtPfMUM",
 )
 
-PP_JET_MULTIPLICITY_BRANCHES = ("jtPfCM", "jtPfNM")
+# Total PF multiplicities include HF constituents; retain for all Run-3 PF jets.
+PF_JET_MULTIPLICITY_BRANCHES = ("jtPfCM", "jtPfNM")
+
+# Preserve the complete doHiJetID composition block for OO R4/R8. trackMax
+# is already in JET_BRANCHES because the current EEC reader uses it.
+OO_HI_JET_ID_BRANCHES = (
+    "trackSum", "trackN", "trackHardSum", "trackHardN",
+    "chargedMax", "chargedSum", "chargedN", "chargedHardSum", "chargedHardN",
+    "photonMax", "photonSum", "photonN", "photonHardSum", "photonHardN",
+    "neutralMax", "neutralSum", "neutralN",
+    "eMax", "eSum", "eN", "muMax", "muSum", "muN",
+)
 
 MC_JET_BRANCHES = (
     "refpt", "refeta", "refphi", "refparton_flavorForB",
@@ -63,7 +74,8 @@ def configureEECSlimForest(process, isMC, isOO):
         label = ("akCs" if isOO else "ak") + radius + "PFJetAnalyzer"
         jets = getattr(process, label)
         jets.branchesToKeep = cms.untracked.vstring(
-            *(JET_BRANCHES + (() if isOO else PP_JET_MULTIPLICITY_BRANCHES)
+            *(JET_BRANCHES + PF_JET_MULTIPLICITY_BRANCHES
+              + (OO_HI_JET_ID_BRANCHES if isOO else ())
               + (MC_JET_BRANCHES if isMC else ()))
         )
         jets.doWTARecluster = cms.untracked.bool(True)
@@ -78,6 +90,12 @@ def configureEECSlimForest(process, isMC, isOO):
         jets.doGenSym = cms.untracked.bool(False)
         if isMC:
             jets.fillGenJets = cms.untracked.bool(True)
+
+    if isOO:
+        # Store the eta-binned hiPuRho profile for a future OO correction.
+        # The current EEC L1FastJet option uses the separate ppRef scalar rho.
+        process.load("HeavyIonsAnalysis.JetAnalysis.RhoAnalysis_cff")
+        process.forest += process.rhoAnalysis
 
     if isMC:
         particles = process.HiGenParticleAna
