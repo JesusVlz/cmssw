@@ -176,6 +176,10 @@ offline branch-contract/booking checks were run. Full CMSSW and EEC event-loop
 execution is still required; no numerical reduction in newly produced file
 size is claimed.
 
+## Generator subevents in the central weighted OO sample
+
+Use the [OO subevent recovery pilot](test/README_oo_recovered_sube.md) to forest the central weighted MiniAOD with the original HIJING particles and the binary generator-particle `sube` labels used by the EEC.
+
 ## Nebraska CRAB production
 
 The OO data list `datasets_OO_DATA.txt` contains `IonPhysics0` through
