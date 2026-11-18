@@ -240,8 +240,8 @@ def main():
     submit_parser.add_argument("--pilot-lumis", type=int,
                                help="maximum shared run/lumi pairs for a LumiBased pilot (default: 8)")
     submit_parser.add_argument("--work-area", default="crab_oo_sube")
-    submit_parser.add_argument("--storage", default="T2_US_Nebraska")
-    submit_parser.add_argument("--outlfn", default="/store/user/gkrintir/HiForest/OO2025/MC")
+    submit_parser.add_argument("--storage", default="T2_CH_CERN")
+    submit_parser.add_argument("--outlfn", default="/store/group/phys_top/gkrintir/HiForest/OO2025/MC")
     submit_parser.add_argument("--preview", action="store_true", help="print task settings without submitting")
     args = parser.parse_args()
     path = args.plan / "plan.json"

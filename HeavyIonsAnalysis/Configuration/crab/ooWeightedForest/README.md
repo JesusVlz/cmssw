@@ -25,7 +25,7 @@ TOOLS="$CMSSW_BASE/src/HeavyIonsAnalysis/Configuration/crab/ooWeightedForest"
 RUN="/afs/cern.ch/work/${USER:0:1}/$USER/oo_pthat80/crab-weighted-v1"
 mkdir -p "$RUN"
 cd "$RUN"
-crab checkwrite --site=T2_US_Nebraska --lfn=/store/user/gkrintir/HiForest/OO2025/MC
+crab checkwrite --site=T2_CH_CERN --lfn=/store/group/phys_top/gkrintir/HiForest/OO2025/MC
 
 CAT="$RUN/oo_hijing_catalog.sqlite.gz"
 python3 "$TOOLS/hijing_catalog.py" --output "$CAT" --work "$RUN/hijing-header-cache" --workers 2
@@ -55,7 +55,7 @@ crab status -d "$P2"
 | Forest threads / streams | 1 / 1 | 1 / 1 |
 | Requested wall time | 20 h | 20 h |
 
-These are two CRAB tasks, normally 12 jobs each. A job streams the original HIJING events recorded in its assigned MiniAOD, grouping reads by source file. Its temporary table is deleted after foresting. Each job checks the output tree event counts and the primary event IDs before CRAB transfers the forest. Full production stages the ROOT output to Nebraska. Pilot tasks also stage their logs. The CRAB scheduler places jobs at eligible input sites. The local lxplus Condor accounting group and job flavour apply only to submissions through that batch system.
+These are two CRAB tasks, normally 12 jobs each. A job streams the original HIJING events recorded in its assigned MiniAOD, grouping reads by source file. Its temporary table is deleted after foresting. Each job checks the output tree event counts and the primary event IDs before CRAB transfers the forest. Full production stages the ROOT output to CERN. Pilot tasks also stage their logs. The CRAB scheduler places jobs at eligible input sites. The local lxplus Condor accounting group and job flavour apply only to submissions through that batch system.
 
 After both tasks finish successfully, download the pilot logs and compare delivered events per allocated core-hour, including prior attempts where CRAB provides their durations.
 
@@ -94,7 +94,7 @@ python3 "$TOOLS/campaign.py" submit "${COMMON[@]}" --mode full "${SIZE[@]}"
 for task in crab_oo_sube/crab_OOsube_v1_full*; do crab status -d "$task"; done
 ```
 
-File-based production uses disjoint input groups of at most 8000 primary files per task. A block larger than that is split by explicit file lists. The preview prints all tasks and their eligible inputs. For planning, divide the DBS file count by the validated files/job and round up. The actual count can be larger at block and site boundaries. Lumi-based production uses one DBS block per task. All full tasks use separate output dataset tags under `/store/user/gkrintir/HiForest/OO2025/MC` at `T2_US_Nebraska`. Use `--storage SITE --outlfn PREFIX` on every submission to choose another destination.
+File-based production uses disjoint input groups of at most 8000 primary files per task. A block larger than that is split by explicit file lists. The preview prints all tasks and their eligible inputs. For planning, divide the DBS file count by the validated files/job and round up. The actual count can be larger at block and site boundaries. Lumi-based production uses one DBS block per task. All full tasks use separate output dataset tags under `/store/group/phys_top/gkrintir/HiForest/OO2025/MC` at `T2_CH_CERN`. Use `--storage SITE --outlfn PREFIX` on every submission to choose another destination.
 
 Repeat the same full command after a partially submitted campaign. It skips tasks with confirmed receipts. If a submission outcome is unknown, inspect the recorded CRAB request and local project before retrying. Use `crab resubmit -d PROJECT` for failed jobs in an existing task. Keep pilot ROOT files separate from full production because the pilots intentionally repeat primary events.
 
