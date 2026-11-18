@@ -158,7 +158,7 @@ def write_source(stream, lfn, indexed):
         for entry, key in sorted(indexed):
             if entry_id(events, entry, lfn) != key:
                 raise ValueError(f"Wrong EventID for {key} in {lfn} entry {entry}")
-            rows = packed_input_rows(events, handle, key)
+            rows = packed_input_rows(events, handle, key, lfn, entry)
             print("E", *key, len(rows), lfn, file=stream)
             for row in rows:
                 print("P", *row, file=stream)

@@ -79,17 +79,35 @@ def candidate_files(wanted):
     return by_file
 
 
-def packed_input_rows(events, handle, key):
+def packed_input_rows(events, handle, key, lfn=None, entry=None):
     # Use the original GEN-SIM collection and the two cuts in PATPackedGenParticleProducer.
-    if not events.getByLabel(("genParticles", "", "SIM"), handle) or handle.product().empty():
-        raise ValueError(f"Missing or empty genParticles::SIM for HIJING event {key}")
+    where = f"HIJING event {key}"
+    if lfn is not None:
+        where += f" in {lfn}, entry {entry}"
+    if not events.getByLabel(("genParticles", "", "SIM"), handle):
+        raise ValueError(f"Missing genParticles::SIM for {where}")
+    particles = handle.product()
+    if particles.empty():
+        # GenParticleProducer also writes an empty vector if its HepMC input was unavailable.
+        from DataFormats.FWLite import Handle
+
+        hepmc = Handle("edm::HepMCProduct")
+        if not events.getByLabel(("generatorSmeared", "", "SIM"), hepmc):
+            raise ValueError(f"Empty genParticles::SIM with missing generatorSmeared::SIM for {where}")
+        generated = hepmc.product().GetEvent()
+        if not generated:
+            raise ValueError(f"Empty genParticles::SIM with null generatorSmeared::SIM event for {where}")
+        count = generated.particles_size()
+        if count != 0:
+            raise ValueError(f"Empty genParticles::SIM but generatorSmeared::SIM contains {count} particles for {where}")
+        return []
     rows = []
-    for particle in handle.product():
+    for particle in particles:
         if particle.status() != 1 or not abs(particle.y()) < 6:
             continue
         kinematics = (particle.pt(), particle.eta(), particle.phi(), particle.mass())
         if not all(math.isfinite(x) for x in kinematics):
-            raise ValueError(f"Nonfinite particle kinematics for HIJING event {key}")
+            raise ValueError(f"Nonfinite particle kinematics for {where}")
         rows.append((*kinematics, int(particle.charge()), int(particle.pdgId())))
     return rows
 
@@ -106,7 +124,7 @@ def write_events(output, wanted, files, handle):
                     continue
                 if key in found:
                     raise ValueError(f"Ambiguous HIJING event {key}: {found[key]} and {(lfn, entry)}")
-                rows = packed_input_rows(events, handle, key)
+                rows = packed_input_rows(events, handle, key, lfn, entry)
                 found[key] = (lfn, entry)
                 print("E", *key, len(rows), lfn, file=output)
                 for row in rows:

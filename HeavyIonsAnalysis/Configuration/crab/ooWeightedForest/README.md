@@ -11,9 +11,10 @@ WORK="/afs/cern.ch/work/${USER:0:1}/$USER/oo_pthat80/sube-pr2"
 cd "$WORK/CMSSW_15_0_11/src"
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval "$(scram runtime -sh)"
-PKG=HeavyIonsAnalysis/Configuration/crab/ooWeightedForest
+CFG=HeavyIonsAnalysis/Configuration
 git -C "$WORK/overlay" fetch --depth=1 --filter=blob:none https://github.com/gkrintir/cmssw.git recover-oo-hijing-sube
-git -C "$WORK/overlay" archive FETCH_HEAD "$PKG" | tar -x -C "$CMSSW_BASE/src"
+git -C "$WORK/overlay" archive FETCH_HEAD "$CFG/crab/ooWeightedForest" \
+  "$CFG/test/build_oo_hijing_truth.py" "$CFG/test/probe_oo_hijing_event.py" | tar -x -C "$CMSSW_BASE/src"
 ```
 
 If the repository is already checked out in the release, updating that checkout makes the same files available. Start the CRAB client in that runtime. Use one persistent working directory for the catalog, plan and submission receipts.
@@ -33,6 +34,19 @@ python3 "$TOOLS/campaign.py" plan --plan plan
 ```
 
 Build the catalog once while a grid proxy is valid. The builder streams the original HIJING file headers through XRootD, checks that every run/lumi/event is unique, and compares the totals with DBS. A failed scan can reuse its completed checkpoints. After success, reuse `$CAT` and `plan/plan.json` for all tasks. The plan records the actual file and event counts, the DBS blocks, and 12 pilot LFNs spanning the primary file sizes or event counts.
+
+### Check an individual HIJING event
+
+If a worker reports a missing or empty particle product, look up its exact HIJING run, lumi and event in the existing catalog. For example, the first full-file pilot reported the key below. The probe reads that entry from the original GEN-SIM and reports the particle collection and its upstream HepMC record.
+
+```bash
+python3 "$CMSSW_BASE/src/HeavyIonsAnalysis/Configuration/test/probe_oo_hijing_event.py" \
+  --catalog "$CAT" --event 1:512:511214
+```
+
+A valid empty `genParticles::SIM` collection can contribute zero HIJING particles when its upstream `generatorSmeared::SIM` HepMC event also contains zero particles. An unavailable product or conflicting counts for an empty collection stop the worker. This preserves the distinction between an event with zero background pairs and an event with unknown background truth. The probe calls the production reader and prints `worker_accepts` plus either `worker_rows` or `worker_error`. A rejected event gives a nonzero exit code. An independently checked example with zero particles in both products is `1:514:513305` in the OO HIJING test file.
+
+To test an updated worker on the grid, reuse the existing catalog and plan and submit a fresh task. For a bounded end-to-end check, `--mode pilotLumi --pilot-lumis 1` selects one primary lumisection. A new task tag packages the current worker for that submission.
 
 ## Measure one and two cores on the same events
 
