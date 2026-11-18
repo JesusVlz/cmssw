@@ -12,8 +12,8 @@ CATALOG = "oo_hijing_catalog.sqlite.gz"
 
 
 def make_config(*, name, catalog, files=None, blocks=None, splitting="FileBased", units=1, total=-1,
-                cores=1, memory=2500, logs=False, storage="T2_CH_CERN",
-                outlfn="/store/group/phys_top/gkrintir/HiForest/OO2025/MC", work_area="crab_oo_sube"):
+                cores=1, memory=2500, logs=False, storage="T2_US_Nebraska",
+                outlfn="/store/user/gkrintir/HiForest/OO2025/MC", work_area="crab_oo_sube"):
     if files and blocks:
         raise ValueError("Choose either a file mask or a block mask")
     if splitting not in ("FileBased", "LumiBased") or (files and splitting != "FileBased"):
