@@ -72,7 +72,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
         setattr(process,"ak"+labelR+"GenJetsReclusterNoNu",
                 ak4GenJets.clone(
-                    src = 'packedGenParticlesForJetsNoNu'
+                    src = 'packedGenParticlesForJetsNoNu',
+                    rParam = jetR
                 )
         )
  
